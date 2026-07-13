@@ -3,8 +3,11 @@ version: '3.8'
 services:
   # Traefik Reverse Proxy
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.7.6
     container_name: traefik
+    restart: unless-stopped
+    environment:
+      - DOCKER_API_VERSION=1.40
     command:
       - "--api.insecure=false"
       - "--providers.docker=true"
@@ -16,7 +19,7 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       # TLS / Let's Encrypt Cert Resolver
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=admin@mysite.dev.br"
+      - "--certificatesresolvers.myresolver.acme.email=${DOCKER_ACME_EMAIL}"
       - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
@@ -26,17 +29,16 @@ services:
       - "./letsencrypt:/letsencrypt"
     networks:
       - webnetwork
-    restart: always
 
   # MySQL Database
   db:
     image: mysql:8.0
     container_name: lorenzo_db
     environment:
-      MYSQL_ROOT_PASSWORD: root_password_123
-      MYSQL_DATABASE: math_reflex_db
-      MYSQL_USER: lorenzo_user
-      MYSQL_PASSWORD: lorenzo_password_123
+      MYSQL_ROOT_PASSWORD: ${DOCKER_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DOCKER_MYSQL_DATABASE:-math_reflex_db}
+      MYSQL_USER: ${DOCKER_MYSQL_USER:-lorenzo_user}
+      MYSQL_PASSWORD: ${DOCKER_MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -45,7 +47,7 @@ services:
       - webnetwork
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password_123"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DOCKER_MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,25 +57,25 @@ services:
     build: .
     container_name: lorenzo_app
     ports:
-      - "3005:3005"
+      - "${PORT:-3005}:3005"
     environment:
       - PORT=3005
-      - SESSION_SECRET=math_reflex_lorenzo_secret_9988
+      - SESSION_SECRET=${SESSION_SECRET}
       - DB_HOST=db
       - DB_PORT=3306
-      - DB_USER=lorenzo_user
-      - DB_PASS=lorenzo_password_123
-      - DB_NAME=math_reflex_db
+      - DB_USER=${DOCKER_MYSQL_USER:-lorenzo_user}
+      - DB_PASS=${DOCKER_MYSQL_PASSWORD}
+      - DB_NAME=${DOCKER_MYSQL_DATABASE:-math_reflex_db}
       - DB_DIALECT=mysql
-      - AUTH_API_BASE_URL=https://mysite.dev.br
-      - USE_MOCK_AUTH=true
+      - AUTH_API_BASE_URL=${AUTH_API_BASE_URL}
+      - USE_MOCK_AUTH=${USE_MOCK_AUTH:-true}
     depends_on:
       db:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
       # Route requests for subdomain lorenzo.mysite.dev.br
-      - "traefik.http.routers.lorenzo-app.rule=Host(`lorenzo.mysite.dev.br`)"
+      - "traefik.http.routers.lorenzo-app.rule=Host(`${DOCKER_APP_HOST:-lorenzo.mysite.dev.br}`)"
       - "traefik.http.routers.lorenzo-app.entrypoints=websecure"
       - "traefik.http.routers.lorenzo-app.tls=true"
       - "traefik.http.routers.lorenzo-app.tls.certresolver=myresolver"
