@@ -1,0 +1,290 @@
+<%- include('../layouts/header') %>
+
+<div class="game-container">
+  
+  <!-- Arena Stage -->
+  <div id="game-arena">
+    <div class="game-header">
+      <div class="game-meta-info">
+        <span class="game-badge <%= operation %>">
+          <%= meta.name %> (Nível <%= level %>)
+        </span>
+        <span class="game-progress-text" id="progress-text">
+          Questão 1 de 10
+        </span>
+      </div>
+      <a href="/dashboard" class="exit-game-btn" onclick="return confirm('Deseja mesmo sair? Seu progresso atual será perdido.')">
+        Sair do Treino
+      </a>
+    </div>
+
+    <!-- Session Progress Bar -->
+    <div class="progress-bar-container">
+      <div class="session-progress" id="session-progress"></div>
+    </div>
+
+    <!-- Question Box -->
+    <div class="question-card glass-panel">
+      <!-- Countdown timer line -->
+      <div class="timer-bar-container">
+        <div class="timer-bar" id="timer-bar"></div>
+      </div>
+
+      <div class="question-text" id="question-text">
+        <!-- Will be loaded dynamically -->
+        0 + 0
+      </div>
+
+      <div class="alternatives-grid" id="alternatives-grid">
+        <!-- 4 buttons loaded dynamically -->
+        <button class="alt-btn" onclick="selectAnswer(0)">0</button>
+        <button class="alt-btn" onclick="selectAnswer(1)">0</button>
+        <button class="alt-btn" onclick="selectAnswer(2)">0</button>
+        <button class="alt-btn" onclick="selectAnswer(3)">0</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Stage (Hidden initially) -->
+  <div id="game-results" style="display: none;">
+    <div class="results-card glass-panel">
+      <div class="results-emoji" id="results-emoji">🏆</div>
+      <h1 class="results-title" id="results-title">Parabéns!</h1>
+      <p class="results-subtitle">Treinamento concluído com sucesso.</p>
+
+      <div class="results-stats">
+        <div class="res-stat">
+          <div class="res-val correct" id="res-correct">0</div>
+          <div class="res-lbl">Corretas</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-val incorrect" id="res-incorrect">0</div>
+          <div class="res-lbl">Incorretas</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-val" id="res-time" style="color: var(--primary);">0s</div>
+          <div class="res-lbl">Tempo Total</div>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button class="btn-primary" style="width: auto; padding: 12px 30px;" onclick="window.location.reload()">Treinar Novamente</button>
+        <button class="btn-secondary" onclick="window.location.href='/dashboard'">Voltar ao Painel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Read injection questions securely -->
+<div id="questions-data" style="display: none;" data-json="<%= questionsJson %>"></div>
+
+<script>
+  // Game state variables
+  const questions = JSON.parse(document.getElementById('questions-data').getAttribute('data-json'));
+  const operation = '<%= operation %>';
+  const level = parseInt('<%= level %>', 10);
+  
+  let currentQuestionIndex = 0;
+  let correctCount = 0;
+  let incorrectCount = 0;
+  let totalTimeSpent = 0;
+  let startTime = null;
+
+  // Question specific variables
+  let questionStartTime = null;
+  let timerInterval = null;
+  let currentQuestion = null;
+  let hasAnswered = false;
+
+  // Initialize game
+  window.onload = function() {
+    startTime = Date.now();
+    loadQuestion(0);
+  };
+
+  function loadQuestion(index) {
+    if (index >= questions.length) {
+      endGame();
+      return;
+    }
+
+    currentQuestionIndex = index;
+    currentQuestion = questions[index];
+    hasAnswered = false;
+
+    // Update session progress text and bar
+    document.getElementById('progress-text').textContent = `Questão ${index + 1} de ${questions.length}`;
+    document.getElementById('session-progress').style.width = `${(index / questions.length) * 100}%`;
+
+    // Render Question
+    document.getElementById('question-text').textContent = currentQuestion.expression;
+
+    // Render Alternatives
+    const grid = document.getElementById('alternatives-grid');
+    grid.innerHTML = '';
+    
+    currentQuestion.alternatives.forEach((alt, idx) => {
+      const button = document.createElement('button');
+      button.className = 'alt-btn';
+      button.textContent = alt;
+      button.onclick = () => selectAnswer(alt, button);
+      grid.appendChild(button);
+    });
+
+    // Start Timer
+    startQuestionTimer(currentQuestion.timeLimit);
+  }
+
+  function startQuestionTimer(durationSeconds) {
+    const timerBar = document.getElementById('timer-bar');
+    timerBar.style.width = '100%';
+    timerBar.style.backgroundColor = 'var(--correct)';
+    
+    questionStartTime = Date.now();
+    const durationMs = durationSeconds * 1000;
+    
+    clearInterval(timerInterval);
+
+    timerInterval = setInterval(() => {
+      const elapsedMs = Date.now() - questionStartTime;
+      const remainingPct = Math.max(0, 100 - (elapsedMs / durationMs) * 100);
+      
+      timerBar.style.width = `${remainingPct}%`;
+
+      // Change timer color based on time left
+      if (remainingPct <= 25) {
+        timerBar.style.backgroundColor = 'var(--incorrect)'; // Red alert
+      } else if (remainingPct <= 55) {
+        timerBar.style.backgroundColor = 'var(--multiplication)'; // Yellow alert
+      }
+
+      if (elapsedMs >= durationMs) {
+        // Time ran out!
+        clearInterval(timerInterval);
+        handleTimeout();
+      }
+    }, 50); // High frequency check for smooth animation
+  }
+
+  function handleTimeout() {
+    if (hasAnswered) return;
+    hasAnswered = true;
+    incorrectCount++;
+    
+    // Disable all options
+    disableAlternatives();
+
+    // Reveal correct answer in green
+    const buttons = document.querySelectorAll('.alt-btn');
+    buttons.forEach(button => {
+      if (parseInt(button.textContent, 10) === currentQuestion.correctAnswer) {
+        button.classList.add('reveal-correct');
+      }
+    });
+
+    // Add 2 second pause before next question
+    setTimeout(() => {
+      loadQuestion(currentQuestionIndex + 1);
+    }, 2000);
+  }
+
+  function selectAnswer(selectedValue, clickedButton) {
+    if (hasAnswered) return;
+    hasAnswered = true;
+    
+    clearInterval(timerInterval); // Stop timer
+    
+    const isCorrect = (selectedValue === currentQuestion.correctAnswer);
+    
+    if (isCorrect) {
+      correctCount++;
+      clickedButton.classList.add('selected-correct');
+    } else {
+      incorrectCount++;
+      clickedButton.classList.add('selected-incorrect');
+      
+      // Also highlight the correct option in green
+      const buttons = document.querySelectorAll('.alt-btn');
+      buttons.forEach(button => {
+        if (parseInt(button.textContent, 10) === currentQuestion.correctAnswer) {
+          button.classList.add('reveal-correct');
+        }
+      });
+    }
+
+    disableAlternatives();
+
+    // Add 2 second pause before next question
+    setTimeout(() => {
+      loadQuestion(currentQuestionIndex + 1);
+    }, 2000);
+  }
+
+  function disableAlternatives() {
+    const buttons = document.querySelectorAll('.alt-btn');
+    buttons.forEach(button => {
+      button.classList.add('disabled');
+      // Set inline styles to prevent hover transforms during pause
+      button.style.pointerEvents = 'none';
+    });
+  }
+
+  async function endGame() {
+    // Hide arena, show results
+    document.getElementById('game-arena').style.display = 'none';
+    document.getElementById('game-results').style.display = 'block';
+
+    // Calculate total time taken
+    totalTimeSpent = (Date.now() - startTime) / 1000;
+
+    // Fill results stats
+    document.getElementById('res-correct').textContent = correctCount;
+    document.getElementById('res-incorrect').textContent = incorrectCount;
+    document.getElementById('res-time').textContent = `${Math.round(totalTimeSpent)}s`;
+
+    // Setup results feedback (emoji & titles)
+    const emojiEl = document.getElementById('results-emoji');
+    const titleEl = document.getElementById('results-title');
+
+    if (correctCount === 10) {
+      emojiEl.textContent = '🏆';
+      titleEl.textContent = 'Reflexo de Gênio!';
+    } else if (correctCount >= 8) {
+      emojiEl.textContent = '⚡';
+      titleEl.textContent = 'Muito Rápido!';
+    } else if (correctCount >= 5) {
+      emojiEl.textContent = '👍';
+      titleEl.textContent = 'Bom Trabalho!';
+    } else {
+      emojiEl.textContent = '🧠';
+      titleEl.textContent = 'Continue Praticando!';
+    }
+
+    // Save results via API post
+    try {
+      const response = await fetch('/game/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          operation,
+          level,
+          score: correctCount,
+          totalTimeSeconds: totalTimeSpent,
+          correctAnswers: correctCount,
+          incorrectAnswers: incorrectCount
+        })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        console.error('Failed to save score:', data.message);
+      }
+    } catch (e) {
+      console.error('Error saving score:', e);
+    }
+  }
+</script>
+<%- include('../layouts/footer') %>

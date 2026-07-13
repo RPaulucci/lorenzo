@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Global HTTP to HTTPS redirection
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      # TLS / Let's Encrypt Cert Resolver
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=admin@mysite.dev.br"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    networks:
+      - webnetwork
+    restart: always
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: lorenzo_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_123
+      MYSQL_DATABASE: math_reflex_db
+      MYSQL_USER: lorenzo_user
+      MYSQL_PASSWORD: lorenzo_password_123
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - webnetwork
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password_123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js MVC Monolith App
+  app:
+    build: .
+    container_name: lorenzo_app
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - SESSION_SECRET=math_reflex_lorenzo_secret_9988
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=lorenzo_user
+      - DB_PASS=lorenzo_password_123
+      - DB_NAME=math_reflex_db
+      - DB_DIALECT=mysql
+      - AUTH_API_BASE_URL=https://mysite.dev.br
+      - USE_MOCK_AUTH=true
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # Route requests for subdomain lorenzo.mysite.dev.br
+      - "traefik.http.routers.lorenzo-app.rule=Host(`lorenzo.mysite.dev.br`)"
+      - "traefik.http.routers.lorenzo-app.entrypoints=websecure"
+      - "traefik.http.routers.lorenzo-app.tls=true"
+      - "traefik.http.routers.lorenzo-app.tls.certresolver=myresolver"
+      - "traefik.http.services.lorenzo-app.loadbalancer.server.port=3005"
+    networks:
+      - webnetwork
+    restart: always
+
+networks:
+  webnetwork:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local

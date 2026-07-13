@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LORENZO - Reflexo Matemático</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+  <header>
+    <a href="/dashboard">
+      <div class="logo">
+        <div class="lorenzo-logo-container">
+          <svg class="lorenzo-logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="5" width="90" height="90" rx="15" fill="none" stroke="currentColor" stroke-width="6"/>
+            <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" stroke-width="6"/>
+            <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" stroke-width="6"/>
+            <text x="27" y="32" font-size="26" font-weight="900" text-anchor="middle" dominant-baseline="middle" fill="#06b6d4">+</text>
+            <text x="73" y="29" font-size="32" font-weight="900" text-anchor="middle" dominant-baseline="middle" fill="#f43f5e">-</text>
+            <text x="27" y="76" font-size="26" font-weight="900" text-anchor="middle" dominant-baseline="middle" fill="#f59e0b">×</text>
+            <text x="73" y="75" font-size="26" font-weight="900" text-anchor="middle" dominant-baseline="middle" fill="#a855f7">÷</text>
+          </svg>
+          <span class="lorenzo-logo-text">LORENZO</span>
+        </div>
+      </div>
+    </a>
+    
+    <% if (locals.user) { %>
+      <div class="nav-links">
+        <div class="user-profile-nav">
+          <div class="avatar-nav">
+            <%= user.name ? user.name.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase() %>
+          </div>
+          <span style="font-weight: 500; font-size: 14px;"><%= user.name || user.username %></span>
+        </div>
+        <a href="/logout" class="btn-nav-logout">Sair</a>
+      </div>
+    <% } %>
+  </header>
+  <main>

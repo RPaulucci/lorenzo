@@ -1,0 +1,222 @@
+<%- include('../layouts/header') %>
+
+<div>
+  <div style="margin-bottom: 40px;">
+    <h1 class="dashboard-title">Olá, <%= user.name || user.username %>! 👋</h1>
+    <p class="dashboard-subtitle">Escolha uma operação matemática abaixo para começar o seu treino de reflexos rápidos.</p>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-row">
+    <div class="stat-card glass-panel">
+      <div class="stat-val"><%= stats.totalSessions %></div>
+      <div class="stat-lbl">Sessões Concluídas</div>
+    </div>
+    <div class="stat-card glass-panel">
+      <div class="stat-val" style="color: var(--correct);"><%= stats.avgScore %>/10</div>
+      <div class="stat-lbl">Média de Acertos</div>
+    </div>
+    <div class="stat-card glass-panel">
+      <div class="stat-val" style="color: var(--addition);"><%= stats.totalCorrect %></div>
+      <div class="stat-lbl">Total de Acertos</div>
+    </div>
+    <div class="stat-card glass-panel">
+      <div class="stat-val" style="color: var(--multiplication);"><%= stats.totalTime %>s</div>
+      <div class="stat-lbl">Tempo de Jogo</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- Left Column: Operations -->
+    <div>
+      <h2 class="section-title">Escolha a Operação</h2>
+      
+      <div class="operation-selector-grid">
+        <!-- Addition -->
+        <div class="operation-card glass-panel addition" onclick="openLevelModal('addition')">
+          <div class="op-header">
+            <div>
+              <div class="op-name">Adição</div>
+              <div class="op-description">Estude somas rápidas de cabeça. Excelente para começar!</div>
+            </div>
+            <div class="op-symbol addition">+</div>
+          </div>
+          <div class="op-footer">
+            <div class="op-level-indicator">10 Níveis</div>
+            <div class="btn-start-op">Começar ➔</div>
+          </div>
+        </div>
+
+        <!-- Subtraction -->
+        <div class="operation-card glass-panel subtraction" onclick="openLevelModal('subtraction')">
+          <div class="op-header">
+            <div>
+              <div class="op-name">Subtração</div>
+              <div class="op-description">Treine subtrações rápidas. Mantenha os números positivos!</div>
+            </div>
+            <div class="op-symbol subtraction">-</div>
+          </div>
+          <div class="op-footer">
+            <div class="op-level-indicator">10 Níveis</div>
+            <div class="btn-start-op">Começar ➔</div>
+          </div>
+        </div>
+
+        <!-- Multiplication -->
+        <div class="operation-card glass-panel multiplication" onclick="openLevelModal('multiplication')">
+          <div class="op-header">
+            <div>
+              <div class="op-name">Multiplicação</div>
+              <div class="op-description">Aprenda a tabuada e multiplicações de forma reflexiva!</div>
+            </div>
+            <div class="op-symbol multiplication">×</div>
+          </div>
+          <div class="op-footer">
+            <div class="op-level-indicator">10 Níveis</div>
+            <div class="btn-start-op">Começar ➔</div>
+          </div>
+        </div>
+
+        <!-- Division -->
+        <div class="operation-card glass-panel division" onclick="openLevelModal('division')">
+          <div class="op-header">
+            <div>
+              <div class="op-name">Divisão</div>
+              <div class="op-description">Treine divisões exatas rapidamente na sua mente.</div>
+            </div>
+            <div class="op-symbol division">÷</div>
+          </div>
+          <div class="op-footer">
+            <div class="op-level-indicator">10 Níveis</div>
+            <div class="btn-start-op">Começar ➔</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: History -->
+    <div>
+      <h2 class="section-title">Histórico de Treinos</h2>
+      
+      <div class="history-card glass-panel">
+        <% if (sessions && sessions.length > 0) { %>
+          <ul class="history-list">
+            <% sessions.forEach(session => { %>
+              <% const meta = operationMap[session.operation] || { name: 'Desconhecido', symbol: '?', color: 'gray' }; %>
+              <li class="history-item">
+                <div class="hist-left">
+                  <div class="hist-icon <%= session.operation %>">
+                    <%= meta.symbol %>
+                  </div>
+                  <div class="hist-info">
+                    <span class="hist-op"><%= meta.name %> (Nível <%= session.level %>)</span>
+                    <span class="hist-date"><%= new Date(session.createdAt).toLocaleDateString('pt-BR') %> às <%= new Date(session.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) %></span>
+                  </div>
+                </div>
+                <div class="hist-right">
+                  <span class="hist-score <%= session.score === 10 ? 'perfect' : '' %>">
+                    <%= session.score %>/10
+                  </span>
+                  <div class="hist-details">
+                    <%= Math.round(session.totalTimeSeconds) %>s total
+                  </div>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+        <% } else { %>
+          <div class="empty-history">
+            <p style="font-size: 32px; margin-bottom: 15px;">📊</p>
+            <p>Nenhum treino realizado ainda.</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Seus resultados aparecerão aqui.</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Level Selection Modal -->
+<div class="modal" id="levelModal">
+  <div class="modal-content glass-panel">
+    <button class="modal-close" onclick="closeLevelModal()">&times;</button>
+    <h3 class="modal-title" id="modalTitle">Selecione a Dificuldade</h3>
+    <p style="text-align: center; color: var(--text-secondary); margin-top: -15px; margin-bottom: 25px; font-size: 14px;">
+      O tempo por questão diminui a cada nível! Você consegue resolver a tempo?
+    </p>
+    
+    <div class="level-grid" id="levelGrid">
+      <!-- Generated via JS for flexibility -->
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedOp = '';
+
+  const timeLimits = {
+    1: '15s',
+    2: '13s',
+    3: '11s',
+    4: '9s',
+    5: '7s',
+    6: '6s',
+    7: '5s',
+    8: '4s',
+    9: '3s',
+    10: '2s'
+  };
+
+  const opNames = {
+    addition: 'Adição (+)',
+    subtraction: 'Subtração (-)',
+    multiplication: 'Multiplicação (×)',
+    division: 'Divisão (÷)'
+  };
+
+  function openLevelModal(operation) {
+    selectedOp = operation;
+    document.getElementById('modalTitle').textContent = `Selecione a Dificuldade - ${opNames[operation]}`;
+    
+    const grid = document.getElementById('levelGrid');
+    grid.innerHTML = '';
+    
+    for (let lvl = 1; lvl <= 10; lvl++) {
+      const btn = document.createElement('button');
+      btn.className = 'level-btn';
+      btn.onclick = () => startSession(lvl);
+      
+      const lvlNum = document.createElement('span');
+      lvlNum.className = 'lvl-num';
+      lvlNum.textContent = lvl;
+      
+      const lvlTime = document.createElement('span');
+      lvlTime.className = 'lvl-time';
+      lvlTime.textContent = timeLimits[lvl];
+      
+      btn.appendChild(lvlNum);
+      btn.appendChild(lvlTime);
+      grid.appendChild(btn);
+    }
+    
+    document.getElementById('levelModal').classList.add('active');
+  }
+
+  function closeLevelModal() {
+    document.getElementById('levelModal').classList.remove('active');
+  }
+
+  function startSession(level) {
+    window.location.href = `/game/start?operation=${selectedOp}&level=${level}`;
+  }
+
+  // Close modal when clicking background
+  window.onclick = function(event) {
+    const modal = document.getElementById('levelModal');
+    if (event.target === modal) {
+      closeLevelModal();
+    }
+  }
+</script>
+
+<%- include('../layouts/footer') %>
