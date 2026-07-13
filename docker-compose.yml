@@ -1,35 +1,6 @@
 version: '3.8'
 
 services:
-  # Traefik Reverse Proxy
-  traefik:
-    image: traefik:v3.7.6
-    container_name: traefik
-    restart: unless-stopped
-    environment:
-      - DOCKER_API_VERSION=1.40
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      # Global HTTP to HTTPS redirection
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      # TLS / Let's Encrypt Cert Resolver
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=${DOCKER_ACME_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./letsencrypt:/letsencrypt"
-    networks:
-      - webnetwork
-
   # MySQL Database
   db:
     image: mysql:8.0
@@ -39,8 +10,6 @@ services:
       MYSQL_DATABASE: ${DOCKER_MYSQL_DATABASE:-math_reflex_db}
       MYSQL_USER: ${DOCKER_MYSQL_USER:-lorenzo_user}
       MYSQL_PASSWORD: ${DOCKER_MYSQL_PASSWORD}
-    ports:
-      - "3306:3306"
     volumes:
       - dbdata:/var/lib/mysql
     networks:
@@ -56,8 +25,6 @@ services:
   app:
     build: .
     container_name: lorenzo_app
-    ports:
-      - "${PORT:-3005}:3005"
     environment:
       - PORT=3005
       - SESSION_SECRET=${SESSION_SECRET}
@@ -80,13 +47,17 @@ services:
       - "traefik.http.routers.lorenzo-app.tls=true"
       - "traefik.http.routers.lorenzo-app.tls.certresolver=myresolver"
       - "traefik.http.services.lorenzo-app.loadbalancer.server.port=3005"
+      - "traefik.docker.network=ms-network"
     networks:
       - webnetwork
+      - ms-network
     restart: always
 
 networks:
   webnetwork:
     driver: bridge
+  ms-network:
+    external: true
 
 volumes:
   dbdata:
