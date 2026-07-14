@@ -25,6 +25,7 @@ services:
     container_name: lorenzo_app
     environment:
       - PORT=3005
+      - NODE_ENV=production
       - SESSION_SECRET=${SESSION_SECRET}
       - DB_HOST=db
       - DB_PORT=3306
@@ -33,7 +34,7 @@ services:
       - DB_NAME=${DOCKER_MYSQL_DATABASE:-math_reflex_db}
       - DB_DIALECT=mysql
       - AUTH_API_BASE_URL=${AUTH_API_BASE_URL}
-      - USE_MOCK_AUTH=${USE_MOCK_AUTH:-true}
+      - USE_MOCK_AUTH=${USE_MOCK_AUTH:-false}
     depends_on:
       db:
         condition: service_healthy

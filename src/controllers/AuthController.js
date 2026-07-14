@@ -5,42 +5,58 @@ class AuthController {
     this.authService = AuthServiceFactory.getService();
   }
 
-  showLogin(req, res) {
+  async showLogin(req, res) {
     if (req.session.user) {
       return res.redirect('/dashboard');
     }
-    res.render('pages/login', { error: null, success: null });
+
+    const token = req.query.token;
+    if (token) {
+      return this.handleTokenLogin(req, res, token);
+    }
+
+    const useMock = process.env.USE_MOCK_AUTH === 'true';
+    if (useMock) {
+      // In development / mock mode, simulate successful SSO redirect back with a mock token
+      const mockUser = { id: 'usr_lorenzo', username: 'lorenzo', name: 'Lorenzo', email: 'lorenzo@mysite.dev.br' };
+      const mockToken = `mock_jwt_token_${Buffer.from(JSON.stringify(mockUser)).toString('base64')}`;
+      return res.redirect(`/login?token=${mockToken}`);
+    }
+
+    // Redirect to external login page
+    const accountUrl = process.env.ACCOUNT_URL || 'https://account.mysite.dev.br';
+    const appHost = process.env.DOCKER_APP_HOST || req.get('host');
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const redirectUri = encodeURIComponent(`${protocol}://${appHost}/login`);
+
+    return res.redirect(`${accountUrl}?redirect=${redirectUri}`);
   }
 
-  async login(req, res) {
-    const { identifier, password } = req.body;
-
-    if (!identifier || !password) {
-      return res.render('pages/login', {
-        error: 'Por favor, preencha todos os campos.',
-        success: null
-      });
-    }
-
+  async handleTokenLogin(req, res, token) {
     try {
-      const result = await this.authService.login(identifier, password);
-      
+      const result = await this.authService.getProfile(token);
+
       if (result.success) {
         req.session.user = result.user;
-        req.session.token = result.token;
+        req.session.token = token;
         return res.redirect('/dashboard');
       } else {
-        return res.render('pages/login', {
-          error: result.message || 'Credenciais inválidas.',
-          success: null
-        });
+        return res.status(401).send(
+          `<h3>Erro na Autenticação</h3>
+           <p>${result.message || 'Token inválido ou expirado.'}</p>
+           <p>Por favor, tente fazer login novamente no portal: <a href="${process.env.ACCOUNT_URL || 'https://account.mysite.dev.br'}">account.mysite.dev.br</a></p>`
+        );
       }
     } catch (error) {
-      return res.render('pages/login', {
-        error: 'Ocorreu um erro ao tentar fazer login. Tente novamente.',
-        success: null
-      });
+      console.error('Error handling token login:', error);
+      return res.status(500).send('Erro interno ao tentar validar sua sessão. Por favor, tente novamente mais tarde.');
     }
+  }
+
+  // POST /login is no longer used since login is handled externally,
+  // but we redirect to GET /login just in case it is called.
+  login(req, res) {
+    res.redirect('/login');
   }
 
   logout(req, res) {
@@ -48,7 +64,15 @@ class AuthController {
       if (err) {
         console.error('Error destroying session:', err);
       }
-      res.redirect('/login');
+      
+      const useMock = process.env.USE_MOCK_AUTH === 'true';
+      if (useMock) {
+        return res.redirect('/login');
+      }
+
+      // Optional: redirect to external logout page to clear the SSO session
+      const accountUrl = process.env.ACCOUNT_URL || 'https://account.mysite.dev.br';
+      res.redirect(`${accountUrl}/logout`);
     });
   }
 }
