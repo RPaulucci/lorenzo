@@ -47,7 +47,20 @@ class GameController {
     const user = req.session.user;
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Usuário não autenticado.' });
+      req.session.pendingSession = {
+        operation,
+        level: parseInt(level, 10),
+        score: parseInt(score, 10),
+        totalTimeSeconds: parseFloat(totalTimeSeconds),
+        correctAnswers: parseInt(correctAnswers, 10),
+        incorrectAnswers: parseInt(incorrectAnswers, 10)
+      };
+
+      return res.json({
+        success: true,
+        pending: true,
+        message: 'Resultado guardado temporariamente. Faça login para salvar.'
+      });
     }
 
     try {
@@ -64,6 +77,7 @@ class GameController {
 
       res.json({
         success: true,
+        pending: false,
         sessionId: session.id
       });
     } catch (error) {

@@ -1,4 +1,5 @@
 const { AuthServiceFactory } = require('../services/AuthService');
+const TrainingSession = require('../models/TrainingSession');
 
 class AuthController {
   constructor() {
@@ -37,8 +38,25 @@ class AuthController {
       const result = await this.authService.getProfile(token);
 
       if (result.success) {
-        req.session.user = result.user;
+        const user = result.user;
+        req.session.user = user;
         req.session.token = token;
+
+        // If there is a pending session from guest mode, save it now
+        if (req.session.pendingSession) {
+          try {
+            await TrainingSession.create({
+              userId: user.id,
+              username: user.name || user.username,
+              ...req.session.pendingSession
+            });
+            delete req.session.pendingSession;
+            req.session.successMessage = 'Seu treino de teste foi salvo com sucesso no seu perfil!';
+          } catch (dbError) {
+            console.error('Error saving pending session after login:', dbError);
+          }
+        }
+
         return res.redirect('/dashboard');
       } else {
         return res.status(401).send(

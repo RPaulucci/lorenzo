@@ -5,6 +5,33 @@ class DashboardController {
   async index(req, res) {
     try {
       const user = req.session.user;
+      const successMessage = req.session.successMessage;
+      if (successMessage) {
+        delete req.session.successMessage;
+      }
+
+      // Format operations names for UI display
+      const operationMap = {
+        addition: { name: 'Adição', symbol: '+', color: 'blue' },
+        subtraction: { name: 'Subtração', symbol: '-', color: 'red' },
+        multiplication: { name: 'Multiplicação', symbol: '×', color: 'orange' },
+        division: { name: 'Divisão', symbol: '÷', color: 'purple' }
+      };
+
+      if (!user) {
+        return res.render('pages/dashboard', {
+          user: null,
+          sessions: [],
+          stats: {
+            totalSessions: 0,
+            avgScore: '0.0',
+            totalCorrect: 0,
+            totalTime: 0
+          },
+          operationMap,
+          successMessage: null
+        });
+      }
       
       // Fetch user's session history
       const sessions = await TrainingSession.findAll({
@@ -32,19 +59,12 @@ class DashboardController {
         totalTime: statsResult.totalTime ? Math.round(statsResult.totalTime) : 0
       };
 
-      // Format operations names for UI display
-      const operationMap = {
-        addition: { name: 'Adição', symbol: '+', color: 'blue' },
-        subtraction: { name: 'Subtração', symbol: '-', color: 'red' },
-        multiplication: { name: 'Multiplicação', symbol: '×', color: 'orange' },
-        division: { name: 'Divisão', symbol: '÷', color: 'purple' }
-      };
-
       res.render('pages/dashboard', {
         user,
         sessions,
         stats,
-        operationMap
+        operationMap,
+        successMessage
       });
     } catch (error) {
       console.error('DashboardController.index error:', error);

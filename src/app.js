@@ -49,10 +49,10 @@ app.get('/login', redirectIfAuth, (req, res) => authController.showLogin(req, re
 app.post('/login', redirectIfAuth, (req, res) => authController.login(req, res));
 app.get('/logout', (req, res) => authController.logout(req, res));
 
-// Protected Area
-app.get('/dashboard', requireAuth, (req, res) => dashboardController.index(req, res));
-app.get('/game/start', requireAuth, (req, res) => gameController.start(req, res));
-app.post('/game/save', requireAuth, (req, res) => gameController.save(req, res));
+// Protected Area / Public Area
+app.get('/dashboard', (req, res) => dashboardController.index(req, res));
+app.get('/game/start', (req, res) => gameController.start(req, res));
+app.post('/game/save', (req, res) => gameController.save(req, res));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

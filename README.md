@@ -8,7 +8,9 @@ O projeto utiliza os princípios **SOLID**, **Clean Code** e **Programação Ori
 
 ## 🚀 Funcionalidades
 
-- **Autenticação e Perfil de Usuário Integrados**: Comunicação direta com a API externa no domínio `mysite.dev.br` com um fallback seguro de Mock local para desenvolvimento.
+- **Trilha de Teste Livre (Modo Visitante)**: Qualquer usuário pode experimentar os jogos matemáticos e treinar sem a necessidade de criar conta ou fazer login de imediato.
+- **Autenticação Unificada (SSO)**: Integração com o portal central `accounts.mysite.dev.br`. A autenticação local foi desativada em prol do login único e seguro.
+- **Salvamento Automático Pós-Login**: Resultados obtidos no modo visitante são salvos automaticamente no perfil do usuário assim que ele efetuar o login ao final da trilha de teste.
 - **4 Operações Fundamentais**:
   - **Soma (`+`)**
   - **Subtração (`-`)**
@@ -16,77 +18,56 @@ O projeto utiliza os princípios **SOLID**, **Clean Code** e **Programação Ori
   - **Divisão (`÷`)**
 - **10 Níveis de Dificuldade por Operação**: A amplitude dos números aumenta à medida que a dificuldade avança.
 - **Tempo Limite Decrescente**: O tempo para resolução diminui conforme a dificuldade aumenta (de 15 segundos no Nível 1 até 2 segundos no Nível 10).
-- **Treinamento de 10 Questões por Sessão**: Sessões rápidas e focadas.
-- **Feedback Visual Imediato**: Alternativas corretas brilham em **verde** e incorretas em **vermelho** por 2 segundos antes de passar à próxima questão.
-- **Painel de Estatísticas**: Gráficos e dados de acertos, sessões concluídas e tempo de resposta.
-- **Histórico de Treino**: Registros detalhados de sessões salvas no MySQL.
+- **Treinamento de 10 Questões por Sessão**: Sessões rápidas e focadas com feedback visual imediato (respostas brilham em **verde** ou **vermelho**).
+- **Painel de Estatísticas & Histórico**: Visualização de acertos, médias e registros detalhados das sessões no MySQL (exclusivo para usuários logados).
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Backend**: Node.js, Express, Sequelize ORM
-- **Banco de Dados**: MySQL (mysql2)
-- **Frontend**: HTML5, Vanilla CSS, EJS Templates, Javascript (ES6+)
-- **Estética**: Design Dark Mode moderno, efeitos de vidro (glassmorphism), animações de feedback interativas.
-
----
-
-## 📁 Estrutura do Projeto
-
-```text
-/src
-  /config
-    database.js      # Conexão com o Sequelize
-  /controllers
-    AuthController.js       # Controle de logins e logout
-    DashboardController.js  # Controle da página inicial do usuário e estatísticas
-    GameController.js       # Controle do treino matemático e gravação dos scores
-  /middlewares
-    authMiddleware.js       # Proteção de rotas autenticadas
-  /models
-    index.js         # Ponto de entrada de sincronização e inicialização do Sequelize
-    TrainingSession.js # Modelo de dados da sessão de treino no banco MySQL
-  /public
-    /css
-      style.css      # Estilização completa e responsiva do app
-  /services
-    AuthService.js   # Integração com API mysite.dev.br (Design Pattern Factory & Strategy)
-    GameService.js   # Lógica geradora de operações matemáticas e níveis de dificuldade
-  /views
-    /layouts
-      header.ejs     # Cabeçalho global
-      footer.ejs     # Rodapé global
-    /pages
-      login.ejs      # Tela de login
-      dashboard.ejs  # Tela principal e progresso
-      game.ejs       # Tela do treino matemático (game arena)
-  app.js             # Inicialização e roteamento do Express
-.env                 # Variáveis de ambiente
-package.json         # Dependências do Node.js
-```
+- **Backend**: Node.js (Express), Sequelize ORM, Express Session.
+- **Banco de Dados**: MySQL (mysql2).
+- **Frontend**: HTML5, Vanilla CSS, EJS Templates, Javascript (ES6+).
+- **Segurança & Redes**: Integração com rede docker externa (`repo-services_ms-network`) para comunicação com o proxy reverso Traefik central da VM. Sem portas expostas diretamente para o host público (apenas via Traefik 80/443).
 
 ---
 
 ## ⚙️ Instalação e Configuração
 
-### Método 1: Utilizando Docker & Docker Compose (Recomendado)
-O projeto está configurado com **Docker Compose** contendo o banco de dados MySQL, o app Node.js (na porta **3005**) e o proxy reverso **Traefik** com HTTPS automático via Let's Encrypt para o subdomínio `lorenzo.mysite.dev.br`.
+### Método 1: Utilizando Docker & Docker Compose (Recomendado para Produção)
+O projeto está configurado para integrar-se ao proxy reverso **Traefik** central rodando na VM através da rede docker externa `repo-services_ms-network`.
 
-1. Certifique-se de que possui o **Docker** e o **Docker Compose** instalados.
-2. Certifique-se de que os apontamentos DNS de `lorenzo.mysite.dev.br` estejam apontando para a sua máquina ou configure um redirecionamento local no `/etc/hosts`:
-   ```text
-   127.0.0.1 lorenzo.mysite.dev.br
+1. Certifique-se de que possui o **Docker** e o **Docker Compose** instalados na VM.
+2. Certifique-se de que a rede docker do Traefik (`repo-services_ms-network`) já foi criada na VM.
+3. Crie e configure o arquivo `.env` na raiz do projeto a partir do modelo:
+   ```bash
+   cp .env.example .env
    ```
-3. Inicialize os serviços:
+4. Edite o `.env` e preencha as variáveis de produção (exemplo abaixo):
+   ```ini
+   PORT=3005
+   SESSION_SECRET=sua_chave_de_sessao_super_segura
+   
+   # Configurações do MySQL Docker
+   DOCKER_MYSQL_ROOT_PASSWORD=senha_root_do_banco
+   DOCKER_MYSQL_USER=lorenzo_user
+   DOCKER_MYSQL_PASSWORD=senha_do_usuario_banco
+   
+   # Integração SSO e Roteamento
+   AUTH_API_BASE_URL=https://api.mysite.dev.br
+   ACCOUNT_URL=https://accounts.mysite.dev.br
+   DOCKER_APP_HOST=lorenzo.mysite.dev.br
+   USE_MOCK_AUTH=false
+   ```
+5. Suba os containers com build em modo de produção:
    ```bash
    docker compose up -d --build
    ```
-4. Acesse o aplicativo via HTTPS: `https://lorenzo.mysite.dev.br` ou acesse diretamente na porta mapeada `http://localhost:3005`.
+6. O app estará acessível em `https://lorenzo.mysite.dev.br` roteado pelo Traefik central.
 
 ---
 
-### Método 2: Execução Local Manual (Sem Docker)
+### Método 2: Execução Local Manual (Sem Docker para Desenvolvimento)
 
 #### 1. Requisitos
 - **Node.js** v18 ou superior
@@ -106,12 +87,14 @@ DB_PASS=sua_senha_mysql
 DB_NAME=math_reflex_db
 DB_DIALECT=mysql
 
-AUTH_API_BASE_URL=https://lorenzo.mysite.dev.br
+# Para desenvolvimento local, você pode usar o Mock de autenticação
+AUTH_API_BASE_URL=https://api.mysite.dev.br
+ACCOUNT_URL=https://accounts.mysite.dev.br
 USE_MOCK_AUTH=true
 ```
 
 #### 3. Criar Banco de Dados MySQL
-Antes de rodar o servidor, crie a base de dados no MySQL:
+Antes de rodar o servidor, crie a base de dados no MySQL local:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS math_reflex_db;
@@ -125,9 +108,6 @@ npm install
 
 # Executar em modo desenvolvimento (com live reload do Nodemon)
 npm run dev
-
-# Executar em modo de produção
-npm start
 ```
 
 Acesse o sistema através do navegador: `http://localhost:3005`

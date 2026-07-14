@@ -1,12 +1,34 @@
 <%- include('../layouts/header') %>
 
 <div>
+  <% if (locals.successMessage) { %>
+    <div class="alert alert-success" style="margin-bottom: 25px; padding: 15px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.15); border: 1px solid var(--correct); color: var(--correct); font-weight: 500; animation: fadeIn 0.3s ease;">
+      <%= successMessage %>
+    </div>
+  <% } %>
+
   <div style="margin-bottom: 40px;">
-    <h1 class="dashboard-title">Olá, <%= user.name || user.username %>! 👋</h1>
-    <p class="dashboard-subtitle">Escolha uma operação matemática abaixo para começar o seu treino de reflexos rápidos.</p>
+    <% if (user) { %>
+      <h1 class="dashboard-title">Olá, <%= user.name || user.username %>! 👋</h1>
+      <p class="dashboard-subtitle">Escolha uma operação matemática abaixo para começar o seu treino de reflexos rápidos.</p>
+    <% } else { %>
+      <h1 class="dashboard-title">Olá, Visitante! 👋</h1>
+      <p class="dashboard-subtitle">Escolha uma operação matemática abaixo para experimentar o treino de reflexos rápidos gratuitamente.</p>
+    <% } %>
   </div>
 
   <!-- Stats Grid -->
+  <% if (!user) { %>
+    <div class="alert alert-info glass-panel" style="margin-bottom: 30px; padding: 20px; border-left: 5px solid var(--primary); display: flex; flex-direction: column; gap: 10px;">
+      <h3 style="margin: 0; color: var(--primary);">🎮 Modo de Teste Ativo</h3>
+      <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+        Você pode jogar e treinar livremente. Porém, para <strong>gravar seu progresso, obter medalhas e acompanhar seu tempo médio</strong> nas estatísticas e no histórico, faça login.
+      </p>
+      <div>
+        <a href="/login" class="btn-primary" style="width: auto; display: inline-flex; font-size: 14px; padding: 8px 20px; text-decoration: none; text-align: center; border-radius: 6px;">Entrar / Criar Conta</a>
+      </div>
+    </div>
+  <% } %>
   <div class="stats-row">
     <div class="stat-card glass-panel">
       <div class="stat-val"><%= stats.totalSessions %></div>
@@ -99,7 +121,7 @@
       <h2 class="section-title">Histórico de Treinos</h2>
       
       <div class="history-card glass-panel">
-        <% if (sessions && sessions.length > 0) { %>
+        <% if (user && sessions && sessions.length > 0) { %>
           <ul class="history-list">
             <% sessions.forEach(session => { %>
               <% const meta = operationMap[session.operation] || { name: 'Desconhecido', symbol: '?', color: 'gray' }; %>
@@ -124,11 +146,17 @@
               </li>
             <% }); %>
           </ul>
-        <% } else { %>
+        <% } else if (user) { %>
           <div class="empty-history">
             <p style="font-size: 32px; margin-bottom: 15px;">📊</p>
             <p>Nenhum treino realizado ainda.</p>
             <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Seus resultados aparecerão aqui.</p>
+          </div>
+        <% } else { %>
+          <div class="empty-history">
+            <p style="font-size: 32px; margin-bottom: 15px;">🔒</p>
+            <p>Histórico Privado</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Faça login para salvar e acompanhar seus treinos.</p>
           </div>
         <% } %>
       </div>
