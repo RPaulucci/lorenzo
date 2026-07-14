@@ -24,7 +24,7 @@ class AuthController {
     }
 
     // Redirect to external login page
-    const accountUrl = process.env.ACCOUNT_URL || 'https://account.mysite.dev.br';
+    const accountUrl = process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br';
     const appHost = process.env.DOCKER_APP_HOST || req.get('host');
     const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
     const redirectUri = encodeURIComponent(`${protocol}://${appHost}/login`);
@@ -44,7 +44,7 @@ class AuthController {
         return res.status(401).send(
           `<h3>Erro na Autenticação</h3>
            <p>${result.message || 'Token inválido ou expirado.'}</p>
-           <p>Por favor, tente fazer login novamente no portal: <a href="${process.env.ACCOUNT_URL || 'https://account.mysite.dev.br'}">account.mysite.dev.br</a></p>`
+           <p>Por favor, tente fazer login novamente no portal: <a href="${process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br'}">accounts.mysite.dev.br</a></p>`
         );
       }
     } catch (error) {
@@ -71,7 +71,7 @@ class AuthController {
       }
 
       // Optional: redirect to external logout page to clear the SSO session
-      const accountUrl = process.env.ACCOUNT_URL || 'https://account.mysite.dev.br';
+      const accountUrl = process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br';
       res.redirect(`${accountUrl}/logout`);
     });
   }
