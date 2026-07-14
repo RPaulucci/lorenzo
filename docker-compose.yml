@@ -50,13 +50,13 @@ services:
       - "traefik.docker.network=ms-network"
     networks:
       - webnetwork
-      - ms-network
+      - repo-services_ms-network
     restart: always
 
 networks:
   webnetwork:
     driver: bridge
-  ms-network:
+  repo-services_ms-network:
     external: true
 
 volumes:
