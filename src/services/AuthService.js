@@ -18,7 +18,7 @@ class ExternalAuthService extends BaseAuthService {
 
   async login(identifier, password) {
     try {
-      const response = await axios.post(`${this.baseUrl}/api/auth/login`, {
+      const response = await axios.post(`${this.baseUrl}/auth/login`, {
         identifier, // can be email or username
         password
       });
@@ -47,16 +47,22 @@ class ExternalAuthService extends BaseAuthService {
 
   async getProfile(token) {
     try {
-      const response = await axios.get(`${this.baseUrl}/api/auth/profile`, {
+      const response = await axios.get(`${this.baseUrl}/auth/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
-      if (response.data && response.data.user) {
+      if (response.data && response.data.data) {
+        const profile = response.data.data;
         return {
           success: true,
-          user: response.data.user
+          user: {
+            id: profile.userId,
+            username: profile.userName,
+            name: profile.displayName || profile.userName,
+            email: profile.email
+          }
         };
       }
 

@@ -32,9 +32,14 @@ app.use(session({
   }
 }));
 
-// Global user session variable for template rendering
+// Global user session variable for template rendering and SSO config
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  res.locals.ssoConfig = {
+    accountUrl: process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br',
+    apiUrl: process.env.AUTH_API_BASE_URL || 'https://api.mysite.dev.br',
+    useMock: process.env.USE_MOCK_AUTH === 'true'
+  };
   next();
 });
 
@@ -48,6 +53,7 @@ app.get('/', (req, res) => {
 // Authentication
 app.get('/login', redirectIfAuth, (req, res) => authController.showLogin(req, res));
 app.post('/login', redirectIfAuth, (req, res) => authController.login(req, res));
+app.post('/auth/sync-session', (req, res) => authController.syncSession(req, res));
 app.get('/logout', (req, res) => authController.logout(req, res));
 
 // Protected Area / Public Area

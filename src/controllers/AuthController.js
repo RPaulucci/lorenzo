@@ -7,44 +7,47 @@ class AuthController {
   }
 
   async showLogin(req, res) {
+    console.log('[AUTH] showLogin called. Query:', req.query, 'Session user:', req.session?.user);
     if (req.session.user) {
+      console.log('[AUTH] Session already exists, redirecting to /dashboard');
       return res.redirect('/dashboard');
-    }
-
-    const token = req.query.token;
-    if (token) {
-      return this.handleTokenLogin(req, res, token);
     }
 
     const useMock = process.env.USE_MOCK_AUTH === 'true';
     if (useMock) {
-      // In development / mock mode, simulate successful SSO redirect back with a mock token
-      const mockUser = { id: 'usr_lorenzo', username: 'lorenzo', name: 'Lorenzo', email: 'lorenzo@mysite.dev.br' };
-      const mockToken = `mock_jwt_token_${Buffer.from(JSON.stringify(mockUser)).toString('base64')}`;
-      return res.redirect(`/login?token=${mockToken}`);
+      // In mock mode, if we don't have token in query, we redirect to generate a mock token
+      const token = req.query.token;
+      if (!token) {
+        console.log('[AUTH] Using mock authentication...');
+        const mockUser = { id: 'usr_lorenzo', username: 'lorenzo', name: 'Lorenzo', email: 'lorenzo@mysite.dev.br' };
+        const mockToken = `mock_jwt_token_${Buffer.from(JSON.stringify(mockUser)).toString('base64')}`;
+        return res.redirect(`/login?token=${mockToken}&refreshToken=mock_refresh_token&userId=${mockUser.id}&email=${mockUser.email}&name=${mockUser.name}`);
+      }
     }
 
-    // Redirect to external login page
-    const accountUrl = process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br';
-    const appHost = process.env.DOCKER_APP_HOST || req.get('host');
-    // Force HTTPS explicitly since the app is served via SSL behind Traefik
-    const redirectUri = encodeURIComponent(`https://${appHost}/login`);
-
-    return res.redirect(`${accountUrl}?redirect=${redirectUri}`);
+    return res.render('pages/login', { error: null });
   }
 
-  async handleTokenLogin(req, res, token) {
+  async syncSession(req, res) {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token is required' });
+    }
+
     try {
       const result = await this.authService.getProfile(token);
+      console.log('[AUTH] syncSession getProfile result:', result);
 
       if (result.success) {
         const user = result.user;
         req.session.user = user;
         req.session.token = token;
+        console.log('[AUTH] Sync session created for user:', user);
 
         // If there is a pending session from guest mode, save it now
         if (req.session.pendingSession) {
           try {
+            console.log('[AUTH] Saving pending training session for user:', user.id);
             await TrainingSession.create({
               userId: user.id,
               username: user.name || user.username,
@@ -53,12 +56,53 @@ class AuthController {
             delete req.session.pendingSession;
             req.session.successMessage = 'Seu treino de teste foi salvo com sucesso no seu perfil!';
           } catch (dbError) {
-            console.error('Error saving pending session after login:', dbError);
+            console.error('[AUTH] Error saving pending session after sync:', dbError);
+          }
+        }
+
+        return res.json({ success: true, user });
+      } else {
+        console.warn('[AUTH] Sync session failed:', result.message);
+        return res.status(401).json({ success: false, message: result.message || 'Token inválido ou expirado.' });
+      }
+    } catch (error) {
+      console.error('Error syncing session:', error);
+      return res.status(500).json({ success: false, message: 'Erro interno ao sincronizar sessão.' });
+    }
+  }
+
+  // handleTokenLogin is kept for backward compatibility if needed, but client-side sync is preferred.
+  async handleTokenLogin(req, res, token) {
+    console.log('[AUTH] handleTokenLogin. Token preview:', token ? token.substring(0, 15) + '...' : 'null');
+    try {
+      const result = await this.authService.getProfile(token);
+      console.log('[AUTH] getProfile result:', result);
+
+      if (result.success) {
+        const user = result.user;
+        req.session.user = user;
+        req.session.token = token;
+        console.log('[AUTH] Session created for user:', user);
+
+        // If there is a pending session from guest mode, save it now
+        if (req.session.pendingSession) {
+          try {
+            console.log('[AUTH] Saving pending training session for user:', user.id);
+            await TrainingSession.create({
+              userId: user.id,
+              username: user.name || user.username,
+              ...req.session.pendingSession
+            });
+            delete req.session.pendingSession;
+            req.session.successMessage = 'Seu treino de teste foi salvo com sucesso no seu perfil!';
+          } catch (dbError) {
+            console.error('[AUTH] Error saving pending session after login:', dbError);
           }
         }
 
         return res.redirect('/dashboard');
       } else {
+        console.warn('[AUTH] Authentication failed:', result.message);
         return res.status(401).send(
           `<h3>Erro na Autenticação</h3>
            <p>${result.message || 'Token inválido ou expirado.'}</p>
@@ -85,12 +129,22 @@ class AuthController {
       
       const useMock = process.env.USE_MOCK_AUTH === 'true';
       if (useMock) {
-        return res.redirect('/login');
+        return res.send(`
+          <script>
+            localStorage.clear();
+            window.location.href = '/login';
+          </script>
+        `);
       }
 
-      // Optional: redirect to external logout page to clear the SSO session
+      // Redirect to external logout page to clear the SSO session
       const accountUrl = process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br';
-      res.redirect(`${accountUrl}/logout`);
+      return res.send(`
+        <script>
+          localStorage.clear();
+          window.location.href = '${accountUrl.replace(/\/$/, '')}/logout';
+        </script>
+      `);
     });
   }
 }

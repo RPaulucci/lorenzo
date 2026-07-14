@@ -6,6 +6,15 @@
   <title>LORENZO - Reflexo Matemático</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <script>
+    window.SSO_CONFIG = {
+      accountUrl: '<%= ssoConfig.accountUrl %>',
+      apiUrl: '<%= ssoConfig.apiUrl %>',
+      useMock: <%= ssoConfig.useMock ? 'true' : 'false' %>
+    };
+    window.USER_IS_AUTHENTICATED = <%= locals.user ? 'true' : 'false' %>;
+  </script>
+  <script src="/js/sso.js"></script>
 </head>
 <body>
   <header>
@@ -34,7 +43,7 @@
           </div>
           <span style="font-weight: 500; font-size: 14px;"><%= user.name || user.username %></span>
         </div>
-        <a href="/logout" class="btn-nav-logout">Sair</a>
+        <a href="/logout" class="btn-nav-logout" onclick="localStorage.clear();">Sair</a>
       </div>
     <% } else { %>
       <div class="nav-links">
