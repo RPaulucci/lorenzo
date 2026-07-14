@@ -45,7 +45,7 @@ services:
       - "traefik.http.routers.lorenzo-app.tls=true"
       - "traefik.http.routers.lorenzo-app.tls.certresolver=myresolver"
       - "traefik.http.services.lorenzo-app.loadbalancer.server.port=3005"
-      - "traefik.docker.network=ms-network"
+      - "traefik.docker.network=repo-services_ms-network"
     networks:
       - webnetwork
       - repo-services_ms-network
