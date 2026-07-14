@@ -35,6 +35,8 @@ services:
       - DB_DIALECT=mysql
       - AUTH_API_BASE_URL=${AUTH_API_BASE_URL}
       - USE_MOCK_AUTH=${USE_MOCK_AUTH:-false}
+      - DOCKER_APP_HOST=${DOCKER_APP_HOST}
+      - ACCOUNT_URL=${ACCOUNT_URL}
     depends_on:
       db:
         condition: service_healthy

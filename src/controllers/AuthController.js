@@ -27,8 +27,8 @@ class AuthController {
     // Redirect to external login page
     const accountUrl = process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br';
     const appHost = process.env.DOCKER_APP_HOST || req.get('host');
-    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const redirectUri = encodeURIComponent(`${protocol}://${appHost}/login`);
+    // Force HTTPS explicitly since the app is served via SSL behind Traefik
+    const redirectUri = encodeURIComponent(`https://${appHost}/login`);
 
     return res.redirect(`${accountUrl}?redirect=${redirectUri}`);
   }

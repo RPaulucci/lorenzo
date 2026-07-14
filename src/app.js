@@ -10,6 +10,7 @@ const dashboardController = require('./controllers/DashboardController');
 const gameController = require('./controllers/GameController');
 
 const app = express();
+app.enable('trust proxy');
 const PORT = process.env.PORT || 3000;
 
 // Set up View Engine
