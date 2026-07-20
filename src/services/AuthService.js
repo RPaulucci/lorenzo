@@ -13,7 +13,7 @@ class BaseAuthService {
 class ExternalAuthService extends BaseAuthService {
   constructor(baseUrl) {
     super();
-    this.baseUrl = baseUrl || process.env.AUTH_API_BASE_URL || 'https://lorenzo.mysite.dev.br';
+    this.baseUrl = baseUrl || process.env.AUTH_API_BASE_URL || 'https://api.mysite.dev.br';
   }
 
   async login(identifier, password) {
