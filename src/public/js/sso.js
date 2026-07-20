@@ -30,13 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Autenticado via SSO com sucesso!");
 
         // Sincroniza a sessão com o servidor Express
-        syncServerSession(token);
+        syncServerSession(token, refreshToken);
     } else {
         const savedToken = localStorage.getItem('auth_token');
+        const savedRefreshToken = localStorage.getItem('refresh_token');
         
         // Se temos um token salvo localmente, mas a sessão no servidor expirou/não existe, sincroniza
         if (savedToken && !userIsAuthenticatedOnServer) {
-            syncServerSession(savedToken);
+            syncServerSession(savedToken, savedRefreshToken);
         }
         
         // Passo 1: Redirecionamento para Login (Se não autenticado e no endpoint /login)
@@ -46,14 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Função para sincronizar o token com o servidor Express
-    async function syncServerSession(token) {
+    async function syncServerSession(token, refreshToken) {
         try {
             const response = await fetch('/auth/sync-session', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ token })
+                body: JSON.stringify({ token, refreshToken })
             });
 
             if (response.ok) {

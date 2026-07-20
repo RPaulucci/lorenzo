@@ -29,7 +29,7 @@ class AuthController {
   }
 
   async syncSession(req, res) {
-    const { token } = req.body;
+    const { token, refreshToken } = req.body;
     if (!token) {
       return res.status(400).json({ success: false, message: 'Token is required' });
     }
@@ -42,6 +42,9 @@ class AuthController {
         const user = result.user;
         req.session.user = user;
         req.session.token = token;
+        if (refreshToken) {
+          req.session.refreshToken = refreshToken;
+        }
         console.log('[AUTH] Sync session created for user:', user);
 
         // If there is a pending session from guest mode, save it now
@@ -121,7 +124,17 @@ class AuthController {
     res.redirect('/login');
   }
 
-  logout(req, res) {
+  async logout(req, res) {
+    const refreshToken = req.session?.refreshToken;
+    if (refreshToken) {
+      try {
+        console.log('[AUTH] Notifying Auth API logout with refreshToken...');
+        await this.authService.logout(refreshToken);
+      } catch (err) {
+        console.error('[AUTH] Error notifying Auth API logout:', err);
+      }
+    }
+
     req.session.destroy((err) => {
       if (err) {
         console.error('Error destroying session:', err);

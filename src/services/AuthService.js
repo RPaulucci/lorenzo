@@ -8,6 +8,10 @@ class BaseAuthService {
   async getProfile(token) {
     throw new Error('Method getProfile() must be implemented');
   }
+
+  async logout(refreshToken) {
+    throw new Error('Method logout() must be implemented');
+  }
 }
 
 class ExternalAuthService extends BaseAuthService {
@@ -78,6 +82,23 @@ class ExternalAuthService extends BaseAuthService {
       };
     }
   }
+
+  async logout(refreshToken) {
+    try {
+      if (!refreshToken) return { success: true };
+      const response = await axios.post(`${this.baseUrl}/auth/logout`, { refreshToken });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('ExternalAuthService.logout error:', error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro ao notificar logout na API externa.'
+      };
+    }
+  }
 }
 
 class MockAuthService extends BaseAuthService {
@@ -138,6 +159,10 @@ class MockAuthService extends BaseAuthService {
         message: 'Token corrompido.'
       };
     }
+  }
+
+  async logout(refreshToken) {
+    return { success: true };
   }
 }
 
