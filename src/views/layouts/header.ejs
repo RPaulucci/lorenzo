@@ -43,7 +43,7 @@
           </div>
           <span style="font-weight: 500; font-size: 14px;"><%= user.name || user.username %></span>
         </div>
-        <a href="/logout" class="btn-nav-logout" onclick="localStorage.clear();">Sair</a>
+        <a href="/logout" class="btn-nav-logout" onclick="event.preventDefault(); const rt = localStorage.getItem('refresh_token') || ''; localStorage.clear(); window.location.href = '/logout?refreshToken=' + encodeURIComponent(rt);">Sair</a>
       </div>
     <% } else { %>
       <div class="nav-links">

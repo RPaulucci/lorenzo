@@ -125,7 +125,7 @@ class AuthController {
   }
 
   async logout(req, res) {
-    const refreshToken = req.session?.refreshToken;
+    const refreshToken = req.session?.refreshToken || req.query?.refreshToken || req.body?.refreshToken;
     if (refreshToken) {
       try {
         console.log('[AUTH] Notifying Auth API logout with refreshToken...');

@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedRefreshToken = localStorage.getItem('refresh_token');
         
         // Se temos um token salvo localmente, mas a sessão no servidor expirou/não existe, sincroniza
-        if (savedToken && !userIsAuthenticatedOnServer) {
+        if (savedToken && savedRefreshToken && !userIsAuthenticatedOnServer) {
             syncServerSession(savedToken, savedRefreshToken);
         }
         
@@ -61,8 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await response.json();
                 if (result.success) {
                     console.log("Sessão sincronizada com o servidor!");
-                    // Recarrega a página para atualizar o estado do EJS
-                    window.location.reload();
+                    if (!userIsAuthenticatedOnServer) {
+                        window.location.reload();
+                    }
                 } else {
                     console.warn("Falha ao sincronizar sessão. Tentando atualizar token...");
                     await handleTokenRefresh();
