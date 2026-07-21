@@ -150,12 +150,12 @@ class AuthController {
         `);
       }
 
-      // Redirect to external login page in central accounts SSO to clear the session without 404
+      // Redirect to external logout route in central accounts SSO to clear the SSO session and invalidate API tokens
       const accountUrl = process.env.ACCOUNT_URL || 'https://accounts.mysite.dev.br';
       return res.send(`
         <script>
           localStorage.clear();
-          window.location.href = '${accountUrl.replace(/\/$/, '')}/#login';
+          window.location.href = '${accountUrl.replace(/\/$/, '')}/#logout';
         </script>
       `);
     });
